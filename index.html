@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Oulu Trail Activity Map (30 km Radius)</title>
+  <!-- Loads Leaflet CSS directly from your local folder -->
+  <link rel="stylesheet" href="leaflet.css" />
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    #map { height: 100vh; width: 100vw; background: #e2e8f0; }
+    .controls {
+      position: absolute; top: 12px; left: 54px; z-index: 1000;
+      background: white; padding: 10px 14px; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; gap: 10px; align-items: center;
+      flex-wrap: wrap;
+    }
+    .today-btn {
+      background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155;
+      padding: 4px 8px; border-radius: 4px; font-size: 13px; cursor: pointer;
+    }
+    .today-btn:hover { background: #e2e8f0; }
+    .legend { font-size: 13px; color: #334155; display: flex; gap: 10px; align-items: center; }
+    .dot { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+    .dashed-dot { display: inline-block; width: 14px; height: 0; border-top: 2px dashed #64748b; margin-right: 4px; vertical-align: middle; }
+    .strava-btn {
+      background: #fc4c02; color: white; text-decoration: none;
+      padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <input type="date" id="datePicker" />
+    <button type="button" id="todayBtn" class="today-btn">Today</button>
+    <div class="legend">
+      <span><span class="dot" style="background:#fc4c02;"></span>Ridden</span>
+      <span><span class="dot" style="background:#475569;"></span>No activity</span>
+      <span><span class="dashed-dot"></span>30 km zone</span>
+    </div>
+    <a id="connectBtn" class="strava-btn" href="https://strava.com">Connect with Strava</a>
+  </div>
+  <div id="map"></div>
+
+  <!-- Defines the global 'L' object directly from your local folder -->
+  <script src="leaflet.js"></script>
+  <script>
+    const SUPABASE_URL = "https://supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_N80QGG_HsdC2MrpxN7_-1Q_K2yFZwem";
+    const OULU_CENTER = [65.0121, 25.4651];
+
+    function decodePolyline(str) {
+      let index = 0, lat = 0, lng = 0, coordinates = [];
+      while (index < str.length) {
+        let b, shift = 0, result = 0;
+        do { b = str.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
+        shift = 0; result = 0;
+        do { b = str.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
+        coordinates.push([lat * 1e-5, lng * 1e-5]);
+      }
+      return coordinates;
+    }
+
+    async function fetchSupabase(path) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        headers: {
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    const openTopoMap = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 17,
+      attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
+    });
+
+    const cyclOSM = L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors | Tiles style by CyclOSM'
+    });
+
+    const map = L.map("map", {
+      center: OULU_CENTER,
+      zoom: 11,
+      layers: [openTopoMap]
+    });
+
+    L.control.layers({
+      "Topo Trails (OpenTopoMap)": openTopoMap,
+      "MTB & Bike (CyclOSM)": cyclOSM,
+    }).addTo(map);
+
+    L.circle(OULU_CENTER, {
+      radius: 30000,
+      color: "#64748b",
+      weight: 2,
+      opacity: 0.75,
+      dashArray: "6, 8",
+      fill: false,
+      interactive: false
+    }).addTo(map);
+
+    const inactiveLayer = L.layerGroup().addTo(map);
+    const activeLayer = L.layerGroup().addTo(map);
+
+    function formatLocalDate(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    const datePicker = document.getElementById("datePicker");
+    const todayBtn = document.getElementById("todayBtn");
+
+    function setTodayDefault() {
+      const now = new Date();
+      const minDate = new Date();
+      minDate.setDate(now.getDate() - 2);
+      const todayStr = formatLocalDate(now);
+      datePicker.max = todayStr;
+      datePicker.min = formatLocalDate(minDate);
+      datePicker.value = todayStr;
+    }
+
+    setTodayDefault();
+
+    let allSegments = [];
+
+    async function init() {
+      try {
+        allSegments = await fetchSupabase("segments?select=segment_id,name,polyline");
+        await renderDate(datePicker.value);
+      } catch (err) {
+        console.error("Supabase fetch error:", err);
+      }
+    }
+
+    async function renderDate(dateStr) {
+      inactiveLayer.clearLayers();
+      activeLayer.clearLayers();
+
+      try {
+        const activeRows = await fetchSupabase(`daily_segment_activity?select=segment_id&ride_date=eq.${dateStr}`);
+        const activeIds = new Set(activeRows.map((r) => r.segment_id));
+
+        allSegments.forEach((seg) => {
+          if (!seg.polyline) return;
+          const coords = decodePolyline(seg.polyline);
+          const isActive = activeIds.has(seg.segment_id);
+
+          if (isActive) {
+            L.polyline(coords, { color: "#fc4c02", weight: 5, opacity: 0.95 })
+              .bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
+              .addTo(activeLayer);
+          } else {
+            L.polyline(coords, { color: "#475569", weight: 3, opacity: 0.6 })
+              .bindPopup(`<b>${seg.name}</b><br>No activity on ${dateStr}`)
+              .addTo(inactiveLayer);
+          }
+        });
+      } catch (err) {
+        console.error("Render error:", err);
+      }
+    }
+
+    datePicker.addEventListener("change", (e) => renderDate(e.target.value));
+    todayBtn.addEventListener("click", () => {
+      setTodayDefault();
+      renderDate(datePicker.value);
+    });
+
+    // Check if returning from Strava OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("connected") === "1") {
+      const banner = document.createElement("div");
+      banner.textContent = "Connected! Future rides within 30 km of Oulu will update the map.";
+      banner.style.cssText =
+        "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:2000; " +
+        "background:#16a34a; color:white; padding:10px 18px; border-radius:8px; " +
+        "font-size:14px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.25);";
+      document.body.appendChild(banner);
+
+      // Remove ?connected=1 from address bar and hide banner after 6 seconds
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(() => banner.remove(), 6000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
