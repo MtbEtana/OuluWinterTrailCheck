@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     grant_type: "authorization_code",
   });
 
-  const tokenRes = await fetch("https://strava.com", {
+  const tokenRes = await fetch("https://strava.com/oauth/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
