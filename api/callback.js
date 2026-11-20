@@ -20,11 +20,6 @@ export default async function handler(req, res) {
     body: formBody.toString(),
   });
 
-  const text = await tokenRes.text();
-
-  console.log("Status:", tokenRes.status);
-  console.log("Response:", text);
-
   const data = await tokenRes.json();
   if (!tokenRes.ok || !data.athlete?.id) {
     return res.status(400).json({ error: "Strava OAuth failed", details: data });
