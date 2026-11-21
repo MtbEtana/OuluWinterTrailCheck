@@ -18,6 +18,11 @@
       padding: 4px 8px; border-radius: 4px; font-size: 13px; cursor: pointer;
     }
     .today-btn:hover { background: #e2e8f0; }
+	.today-btn.active {
+      background: #fc4c02;
+      color: white;
+      border-color: #fc4c02;
+    }
     .legend { font-size: 13px; color: #334155; display: flex; gap: 10px; align-items: center; }
     .dot { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
     .dashed-dot { display: inline-block; width: 14px; height: 0; border-top: 2px dashed #64748b; margin-right: 4px; vertical-align: middle; }
@@ -67,6 +72,14 @@
         coordinates.push([lat * 1e-5, lng * 1e-5]);
       }
       return coordinates;
+    }
+
+    function setActiveButton(activeButton) {
+      [todayBtn, yesterdayBtn, twoDaysAgoBtn].forEach(btn => {
+        btn.classList.remove("active");
+      });
+
+      activeButton.classList.add("active");
     }
 
     async function fetchSupabase(path) {
@@ -151,7 +164,9 @@
 
     async function init() {
       try {
-        allSegments = await fetchSupabase(
+        setActiveButton(todayBtn);
+		
+		allSegments = await fetchSupabase(
           "segments?select=segment_id,name,polyline"
         );
 
@@ -176,8 +191,18 @@
           const isActive = activeIds.has(seg.segment_id);
 
           if (isActive) {
-            L.polyline(coords, { color: "#fc4c02", weight: 5, opacity: 0.95 })
-              .bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
+            L.polyline(coords, {
+              color: "#ffffff",
+              weight: 9,
+              opacity: 0.9
+            }).addTo(activeLayer);
+			  
+            L.polyline(coords, {
+              color: "#fc4c02",
+              weight: 5,
+              opacity: 1
+            })
+			  .bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
               .addTo(activeLayer);
           } else {
             L.polyline(coords, { color: "#475569", weight: 3, opacity: 0.6 })
@@ -191,14 +216,17 @@
     }
 
     todayBtn.addEventListener("click", () => {
+      setActiveButton(todayBtn);
       renderDate(getDateDaysAgo(0));
     });
 
     yesterdayBtn.addEventListener("click", () => {
+      setActiveButton(yesterdayBtn);
       renderDate(getDateDaysAgo(1));
     });
 
     twoDaysAgoBtn.addEventListener("click", () => {
+      setActiveButton(twoDaysAgoBtn);
       renderDate(getDateDaysAgo(2));
     });
 
