@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Oulu Trail Activity Map (30 km Radius)</title>
+  <title>Oulu Trail Daily Active Segments Map (30 km Radius)</title>
   <link rel="stylesheet" href="leaflet.css" />
   <style>
     body { margin: 0; font-family: system-ui, sans-serif; }
@@ -42,8 +42,8 @@
 
   <script src="leaflet.js"></script>
   <script>
-    const SUPABASE_URL = "https://cpbsxwryxbgfadyvplll.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_N80QGG_HsdC2MrpxN7_-1Q_K2yFZwem";
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const OULU_CENTER = [65.0121, 25.4651];
 
     function decodePolyline(str) {
@@ -113,20 +113,15 @@
       return `${year}-${month}-${day}`;
     }
 
-    const datePicker = document.getElementById("datePicker");
     const todayBtn = document.getElementById("todayBtn");
+    const yesterdayBtn = document.getElementById("yesterdayBtn");
+    const twoDaysAgoBtn = document.getElementById("twoDaysAgoBtn");
 
-    function setTodayDefault() {
-      const now = new Date();
-      const minDate = new Date();
-      minDate.setDate(now.getDate() - 2);
-      const todayStr = formatLocalDate(now);
-      datePicker.max = todayStr;
-      datePicker.min = formatLocalDate(minDate);
-      datePicker.value = todayStr;
+    function getDateDaysAgo(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return formatLocalDate(d);
     }
-
-    setTodayDefault();
 
     // Show confirmation banner when returning from Strava OAuth redirect
     const urlParams = new URLSearchParams(window.location.search);
@@ -147,8 +142,12 @@
 
     async function init() {
       try {
-        allSegments = await fetchSupabase("segments?select=segment_id,name,polyline");
-        await renderDate(datePicker.value);
+        allSegments = await fetchSupabase(
+          "segments?select=segment_id,name,polyline"
+        );
+
+        await renderDate(getDateDaysAgo(0));
+
       } catch (err) {
         console.error("Supabase fetch error:", err);
       }
@@ -182,10 +181,16 @@
       }
     }
 
-    datePicker.addEventListener("change", (e) => renderDate(e.target.value));
     todayBtn.addEventListener("click", () => {
-      setTodayDefault();
-      renderDate(datePicker.value);
+      renderDate(getDateDaysAgo(0));
+    });
+
+    yesterdayBtn.addEventListener("click", () => {
+      renderDate(getDateDaysAgo(1));
+    });
+
+    twoDaysAgoBtn.addEventListener("click", () => {
+      renderDate(getDateDaysAgo(2));
     });
 
     init();
