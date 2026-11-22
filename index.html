@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Oulu Trail Daily Active Segments Map (30 km Radius)</title>
+  <title>MTB Oulu community segment heatmap (30 km Radius)</title>
   <link rel="stylesheet" href="leaflet.css" />
   <style>
     body { margin: 0; font-family: system-ui, sans-serif; }
@@ -50,7 +50,10 @@
       <span><span class="dot" style="background:#475569;"></span>No activity</span>
       <span><span class="dashed-dot"></span>30 km zone</span>
     </div>
+	<div style="font-size:12px;color:#64748b;max-width:420px;">Ride data is contributed by members of MTB Oulu Strava Club.</div>
     <a id="connectBtn" class="strava-btn" href="https://www.strava.com/oauth/authorize?client_id=298336&response_type=code&redirect_uri=https://cpbsxwryxbgfadyvplll.supabase.co/functions/v1/strava-webhook&approval_prompt=auto&scope=read,activity:read">Connect with Strava</a>
+  
+    <a id="joinClubBtn" class="strava-btn" href="https://www.strava.com/clubs/636837" style="display:none;background:#16a34a;">Join MTB Oulu Club</a>
   </div>
   <div id="map"></div>
 
@@ -145,20 +148,48 @@
       return formatLocalDate(d);
     }
 
-    // Show confirmation banner when returning from Strava OAuth redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("connected") === "1") {
-      const banner = document.createElement("div");
-      banner.textContent = "Connected! Future rides within 30 km of Oulu will update the map.";
-      banner.style.cssText =
-        "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:2000; " +
-        "background:#16a34a; color:white; padding:10px 18px; border-radius:8px; " +
-        "font-size:14px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.25);";
-      document.body.appendChild(banner);
+// test version of Strava club member check
 
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setTimeout(() => banner.remove(), 6000);
-    }
+	const urlParams = new URLSearchParams(
+	  window.location.search
+	);
+
+	if (urlParams.get("connected") === "1") {
+
+	  const banner = document.createElement("div");
+
+	  banner.textContent =
+		"Connected! Future rides within 30 km of Oulu will update the map.";
+
+	  banner.style.cssText =
+		"position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:2000;" +
+		"background:#16a34a; color:white; padding:10px 18px; border-radius:8px;";
+
+	  document.body.appendChild(banner);
+
+	  setTimeout(() => banner.remove(), 6000);
+	}
+
+	if (urlParams.get("not_member") === "1") {
+
+      // Hide connect button from non-member
+	  document.getElementById("joinClubBtn").style.display = "inline-block";
+      document.getElementById("connectBtn").style.display = "none";
+
+	  const banner = document.createElement("div");
+
+	  banner.textContent =
+		"To contribute ride data, you must first join MTB Oulu Strava Club.";
+
+	  banner.style.cssText =
+		"position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:2000;" +
+		"background:#dc2626; color:white; padding:10px 18px; border-radius:8px;";
+
+	  document.body.appendChild(banner);
+
+	  document.getElementById("joinClubBtn")
+		.style.display = "inline-block";
+	}
 
     let allSegments = [];
 
@@ -205,6 +236,12 @@
 			  .bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
               .addTo(activeLayer);
           } else {
+            L.polyline(coords, {
+              color: "#ffffff",
+              weight: 9,
+              opacity: 0.9
+            }).addTo(activeLayer);
+
             L.polyline(coords, { color: "#475569", weight: 3, opacity: 0.6 })
               .bindPopup(`<b>${seg.name}</b><br>No activity on ${dateStr}`)
               .addTo(inactiveLayer);
