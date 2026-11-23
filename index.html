@@ -29,6 +29,32 @@
     .strava-btn {
       background: #fc4c02; color: white; text-decoration: none;
       padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size: 14px;
+    }	
+	.info-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .info-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+    }
+	@media (max-width: 768px) {
+
+      .controls {
+        left: 8px;
+        right: 8px;
+        width: auto;
+      }
+
+      .info-row {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -50,13 +76,58 @@
       <span><span class="dot" style="background:#475569;"></span>No activity</span>
       <span><span class="dashed-dot"></span>30 km zone</span>
     </div>
-	<div style="font-size:12px;color:#64748b;max-width:420px;">Ride data is contributed by members of MTB Oulu Strava Club. Map highlights whether at least one club member visited a segment during the day or not. Only visited / not visited status is collected. Daily status is provided for three days and data older than that is deleted. Intended use is as an aid for ride planning in winter time and for informing the community if you opened some trails after a snowfall.</div>
+	<div class="info-row">
+      <span>Daily segments with at least one ride (check info).</span>
+      <button id="infoBtn" class="info-btn">
+        ℹ️
+      </button>
+    </div>
     <a id="connectBtn" class="strava-btn" href="https://www.strava.com/oauth/authorize?client_id=298336&response_type=code&redirect_uri=https://cpbsxwryxbgfadyvplll.supabase.co/functions/v1/strava-webhook&approval_prompt=auto&scope=read,activity:read">Connect with Strava</a>
-  
     <a id="joinClubBtn" class="strava-btn" href="https://www.strava.com/clubs/206974" style="display:none;background:#16a34a;">Join MTB Oulu Club</a>
   </div>
   <div id="map"></div>
 
+  <div id="infoModal"
+     style="
+       display:none;
+       position:fixed;
+       inset:0;
+       background:rgba(0,0,0,0.5);
+       z-index:3000;
+     ">
+  <div style="
+       max-width:420px;
+       margin:80px auto;
+       background:white;
+       border-radius:12px;
+       padding:20px;
+       box-shadow:0 8px 30px rgba(0,0,0,.3);
+  ">
+    <h3>About this map</h3>
+
+    <ul style="padding-left:18px;">
+      	  
+	  <li>Map displays daily segments with at least one ride.</li>
+	  <li>This is a niche tool designed for winter ride planning after heavy snowfall.</li>
+	  <li>Areas with many active segments are more likely rideable.</li>
+	  <li>Alternatively play a game of opening snow-packed single tracks!</li>
+	  <li>In other times, see which corner of Oulu has most active riders.</li>
+	  <li>Opt-in to contribute your ride data by:</li>
+	  <li>1. Joining "MTB Oulu" Strava Club (mandatory).</li>
+	  <li>2. Connect to Strava.</li>
+      <li>Only segment visited / not visited status is stored.</li>
+      <li>No ride tracks or leaderboards are stored.</li>
+      <li>Last 3 days are shown.</li>
+      <li>Older data is automatically deleted.</li>
+	  <li>Only segments within 30km from Oulu center are accepted.</li>
+    </ul>
+
+    <button id="closeInfoBtn"
+            class="today-btn">
+      Close
+    </button>
+  </div>
+  </div>
   <script src="leaflet.js"></script>
   <script>
     const SUPABASE_URL = "https://cpbsxwryxbgfadyvplll.supabase.co"
@@ -257,6 +328,30 @@
       setActiveButton(twoDaysAgoBtn);
       renderDate(getDateDaysAgo(2));
     });
+
+    document
+      .getElementById("infoBtn")
+      .addEventListener("click", () => {
+        document.getElementById("infoModal")
+          .style.display = "block";
+      });
+
+    document
+      .getElementById("closeInfoBtn")
+      .addEventListener("click", () => {
+        document.getElementById("infoModal")
+          .style.display = "none";
+      });
+
+    document
+      .getElementById("infoModal")
+      .addEventListener("click", (e) => {
+
+        if (e.target.id === "infoModal") {
+          document.getElementById("infoModal")
+            .style.display = "none";
+        }
+      });
 
     init();
   </script>
