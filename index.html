@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      connect-src 'self' https://cpbsxwryxbgfadyvplll.supabase.co;
+      img-src 'self' data: https:;
+	  object-src 'none';
+      base-uri 'self';
+    ">
+
   <title>MTB Oulu community daily segment inactive / active status (21 km Radius)</title>
   <link rel="stylesheet" href="leaflet.css" />
   <style>
@@ -331,17 +343,39 @@
               opacity: 0.9
             }).addTo(activeLayer);
 			  
-            L.polyline(coords, {
+            const polyline = L.polyline(coords, {
               color: "#fc4c02",
               weight: 5,
               opacity: 1
-            })
-			  .bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
-              .addTo(activeLayer);
+            });
+			  //.bindPopup(`<b>${seg.name}</b><br>Activity recorded on ${dateStr}`)
+			  const popup = document.createElement("div");
+              const title = document.createElement("b");
+              title.textContent = seg.name;
+              popup.appendChild(title);
+              popup.appendChild(document.createElement("br"));
+              popup.appendChild(
+                document.createTextNode(`Activity recorded on ${dateStr}`)
+              );
+			  polyline.bindPopup(popup);
+              polyline.addTo(activeLayer);
           } else {
-            L.polyline(coords, { color: "#475569", weight: 3, opacity: 0.6 })
-              .bindPopup(`<b>${seg.name}</b><br>No activity on ${dateStr}`)
-              .addTo(inactiveLayer);
+              //.bindPopup(`<b>${seg.name}</b><br>No activity on ${dateStr}`)
+			  const polyline = L.polyline(coords, {
+                color: "#475569",
+                weight: 3,
+                opacity: 0.6
+              });
+			  const popup = document.createElement("div");
+              const title = document.createElement("b");
+              title.textContent = seg.name;
+              popup.appendChild(title);
+              popup.appendChild(document.createElement("br"));
+              popup.appendChild(
+                document.createTextNode(`No activity on ${dateStr}`)
+              );
+			  polyline.bindPopup(popup);
+              polyline.addTo(inactiveLayer);
           }
         });
       } catch (err) {
