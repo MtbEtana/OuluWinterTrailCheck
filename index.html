@@ -286,6 +286,12 @@
 	  document.body.appendChild(banner);
 
 	  setTimeout(() => banner.remove(), 6000);
+	  
+	  window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+      );
 	}
 
 	if (urlParams.get("not_member") === "1") {
