@@ -82,12 +82,45 @@
         ℹ️
       </button>
     </div>
-    <a id="connectBtn" class="strava-btn" href="https://www.strava.com/oauth/authorize?client_id=298336&response_type=code&redirect_uri=https://cpbsxwryxbgfadyvplll.supabase.co/functions/v1/strava-webhook&approval_prompt=auto&scope=read,activity:read">Connect with Strava</a>
+    <a id="connectBtn" class="strava-btn" href="#">Connect with Strava</a>
     <a id="joinClubBtn" class="strava-btn" href="https://www.strava.com/clubs/206974" style="display:none;background:#16a34a;">Join MTB Oulu Club</a>
   </div>
   <div id="map"></div>
 
   <div id="infoModal"
+     style="
+       display:none;
+       position:fixed;
+       inset:0;
+       background:rgba(0,0,0,0.5);
+       z-index:3000;
+     ">
+      <div style="
+           max-width:420px;
+           margin:80px auto;
+           background:white;
+           border-radius:12px;
+           padding:20px;
+           box-shadow:0 8px 30px rgba(0,0,0,.3);
+      ">
+        <h3>About this map</h3>
+
+        <ul style="padding-left:18px;">
+      	  
+    	  <li>This is a niche tool designed for winter ride planning after heavy snowfall. Map highlights segments which have had at least one ride during a day. Three days view is provided. When it snows constantly, map is most likely useless, but in case it snowed two days ago, but not anymore after that, you can get idea from yesterday/today maps which areas are likely rideable. Alternatively play a game of opening snow-packed single tracks with your fatbike if you are into that kind of thing. In non-snowing days, it is simply a daily coverage map of the MTB Oulu club.</li>
+    	  <li>Disclaimer: Trail activity may be incomplete or delayed. Trail may be blocked or in poor condition even if map shows activity. Trail may also be completely rideable even if map shows no activity (as the map is populated by only a small fraction cyclists and does not account for dog walkers, snowcross and alike). Use at your own discretion! It is your responsibility to go prepared for any conditions. Author is not responsible if you get yourself in harms way.</li>
+    	  <li>Opt-in to contribute your ride data to the map: 1. Join "MTB Oulu" Strava Club (mandatory). 2. Connect to Strava. Note that only segments within 21km from Oulu city center are accepted (see the large circle in the map).</li>
+    	  <li>Data minimization/Privacy: Individual ride tracks are not stored. Only "segment visited flag" in database is toggled to "visited" when any number of athletes visit that segment. Number of athletes visiting is not stored/displayed. Time of last segment visit is not stored/displayed, but only date. Daily segment activity flags older than three days are automatically deleted. You may still be identified indirectly if there is low activity in segment and club member activities are browsed in strava app.</li>
+          <li>You can stop contributing at any time by revoking access in Strava app: Settings → My Apps → Revoke access in Strava</li>
+        </ul>
+        <button id="closeInfoBtn"
+                class="today-btn">
+          Close
+        </button>
+      </div>
+  </div>
+  
+  <div id="connectModal"
      style="
        display:none;
        position:fixed;
@@ -103,27 +136,40 @@
        padding:20px;
        box-shadow:0 8px 30px rgba(0,0,0,.3);
   ">
-    <h3>About this map</h3>
 
-    <ul style="padding-left:18px;">
-      	  
-	  <li>This is a niche tool designed for winter ride planning after heavy snowfall. Map highlights segments which have had at least one ride during a day. Three days view is provided. When it snows constantly, map is most likely useless, but in case it snowed two days ago, but not anymore after that, you can get idea from yesterday/today maps which areas are likely rideable. Alternatively play a game of opening snow-packed single tracks with your fatbike if you are into that kind of thing. In non-snowing days, it is simply a daily coverage map of the MTB Oulu club.</li>
-	  <li>Disclaimer: Trail activity may be incomplete or delayed. Trail may be blocked or in poor condition even if map shows activity. Trail may also be completely rideable even if map shows no activity (as the map is populated by only a small fraction cyclists and does not account for dog walkers, snowcross and alike). Use at your own discretion! It is your responsibility to go prepared for any conditions. Author is not responsible if you get yourself in harms way.</li>
-	  <li>Opt-in to contribute your ride data to the map: 1. Join "MTB Oulu" Strava Club (mandatory). 2. Connect to Strava. Note that only segments within 21km from Oulu city center are accepted (see the large circle in the map).</li>
-	  <li>Data minimization/Privacy: Individual ride tracks are not stored. Only "segment visited flag" in database is toggled to "visited" when any number of athletes visit that segment. Number of athletes visiting is not stored/displayed. Time of last segment visit is not stored/displayed, but only date. Daily segment activity flags older than three days are automatically deleted. You may still be identified indirectly if there is low activity in segment and club member activities are browsed in strava app.</li>
-      <li>You can stop contributing at any time by revoking access in Strava app: Settings → My Apps → Revoke access in Strava</li>
-    </ul>
-    <button id="closeInfoBtn"
-            class="today-btn">
-      Close
-    </button>
+    <h3>Before connecting</h3>
+    <p>
+      By connecting Strava you allow future rides within
+      21 km of Oulu city center to contribute to this
+      public trail activity map.
+    </p>
+    <p>
+      <li>Privacy: Individual ride tracks are not stored. Only "segment visited flag" in database is toggled to "visited" when any number of athletes visit that segment in same day. Number of athletes visiting a segment is not stored/displayed. Time of last segment visit is not stored/displayed, but only the date. Daily segment activity status flags older than three days are automatically deleted. You may still be identified indirectly if there is low activity in a segment and the club member activities are browsed in strava app.</li>
+    </p>
+	<p>
+	  <li>You can stop contributing at any time by revoking access in Strava app: Settings → My Apps → Revoke access in Strava</li>
+	</p>
+	
+    <div style="display:flex;gap:10px;">
+      <button id="cancelConnectBtn"
+              class="today-btn">
+        Cancel
+      </button>
+      <button id="continueConnectBtn"
+              class="strava-btn"
+              style="border:none;">
+        Continue to Strava
+      </button>
+    </div>
   </div>
-  </div>
+</div>
+  
   <script src="leaflet.js"></script>
   <script>
     const SUPABASE_URL = "https://cpbsxwryxbgfadyvplll.supabase.co"
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_N80QGG_HsdC2MrpxN7_-1Q_K2yFZwem";
     const OULU_CENTER = [65.0121, 25.4651];
+	const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize?client_id=298336&response_type=code&redirect_uri=https://cpbsxwryxbgfadyvplll.supabase.co/functions/v1/strava-webhook&approval_prompt=auto&scope=read,activity:read";
 
     function decodePolyline(str) {
       let index = 0, lat = 0, lng = 0, coordinates = [];
@@ -209,8 +255,6 @@
       d.setDate(d.getDate() - days);
       return formatLocalDate(d);
     }
-
-// test version of Strava club member check
 
 	const urlParams = new URLSearchParams(
 	  window.location.search
@@ -343,6 +387,36 @@
             .style.display = "none";
         }
       });
+
+	document
+	  .getElementById("connectBtn")
+	  .addEventListener("click", (e) => {
+		e.preventDefault();
+		document.getElementById("connectModal")
+		  .style.display = "block";
+	  });
+
+	document
+	  .getElementById("cancelConnectBtn")
+	  .addEventListener("click", () => {
+		document.getElementById("connectModal")
+		  .style.display = "none";
+	  });
+
+	document
+	  .getElementById("continueConnectBtn")
+	  .addEventListener("click", () => {
+		window.location.href = STRAVA_AUTH_URL;
+	  });
+
+	document
+	  .getElementById("connectModal")
+	  .addEventListener("click", (e) => {
+		if (e.target.id === "connectModal") {
+		  document.getElementById("connectModal")
+			.style.display = "none";
+		}
+	  });
 
     init();
   </script>
